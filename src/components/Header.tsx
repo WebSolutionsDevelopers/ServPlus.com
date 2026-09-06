@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight leading-tight flex items-center gap-2">
-                <span>Serviços do Dia</span>
+                <span>Bem vindo ao ServPlus !!!</span>
               </h1>
               <p className="text-xs text-slate-400 flex items-center gap-1">
                 <UserIcon className="w-3 h-3 text-slate-500" />
