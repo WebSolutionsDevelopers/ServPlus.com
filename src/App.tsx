@@ -21,6 +21,7 @@ import { ServicoCard } from './components/ServicoCard';
 import { ServicoFormModal } from './components/ServicoFormModal';
 import { ServicoDetailModal } from './components/ServicoDetailModal';
 import { ExportOptionsModal } from './components/ExportOptionsModal';
+import { ExportExcelModal } from './components/ExportExcelModal';
 import { TelegramConfigModal } from './components/TelegramConfigModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
 import { ensureTelegramConfig } from './utils/telegramUtils';
@@ -70,6 +71,7 @@ export default function App() {
   const [servicoParaEditar, setServicoParaEditar] = useState<ServicoItem | null>(null);
   const [servicoParaDetalhe, setServicoParaDetalhe] = useState<ServicoItem | null>(null);
   const [exportData, setExportData] = useState<ExportData | null>(null);
+  const [exportExcelModalAberto, setExportExcelModalAberto] = useState(false);
   const [telegramConfigAberto, setTelegramConfigAberto] = useState(false);
 
   // Monitorar Eventos de Instalação do PWA
@@ -379,9 +381,7 @@ export default function App() {
             )
           )
         }
-        onExportarExcel={() =>
-          setExportData(gerarExcelData(servicosFiltrados, user.email || ''))
-        }
+        onExportarExcel={() => setExportExcelModalAberto(true)}
         totalServicos={servicosFiltrados.length}
         onOpenTelegramConfig={() => setTelegramConfigAberto(true)}
         onOpenPwaModal={() => setPwaModalAberto(true)}
@@ -446,7 +446,6 @@ export default function App() {
                 <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400" />
                 Zero Leituras no BD
               </span>
-              
             </div>
           </div>
 
@@ -538,6 +537,14 @@ export default function App() {
         onOpenTelegramConfig={() => setTelegramConfigAberto(true)}
       />
 
+      <ExportExcelModal
+        isOpen={exportExcelModalAberto}
+        onClose={() => setExportExcelModalAberto(false)}
+        servicos={servicosFiltrados}
+        userEmail={user.email || ''}
+        onExportReady={(data) => setExportData(data)}
+      />
+
       <ExportOptionsModal
         exportData={exportData}
         onClose={() => setExportData(null)}
@@ -551,7 +558,7 @@ export default function App() {
         userName={user.displayName || user.email || ''}
       />
 
-      {/* Modal de Instalação PWA 
+      {/* Modal de Instalação PWA */}
       <PwaInstallModal
         isOpen={pwaModalAberto}
         onClose={() => setPwaModalAberto(false)}
@@ -560,7 +567,7 @@ export default function App() {
         isInstalled={isPwaInstalled}
       />
 
-      {/* Banner Flutuante de Instalação Mobile PWA (se não instalado e não dispensado) 
+      {/* Banner Flutuante de Instalação Mobile PWA (se não instalado e não dispensado) */}
       {!isPwaInstalled && !pwaBannerDismissed && (
         <div className="sm:hidden fixed bottom-3 inset-x-3 z-40 bg-slate-900/95 border border-blue-500/40 rounded-2xl p-3 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -589,7 +596,7 @@ export default function App() {
             </button>
           </div>
         </div>
-      )}*/}
+      )}
 
     </div>
   );
