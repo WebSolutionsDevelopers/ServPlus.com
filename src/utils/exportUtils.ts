@@ -126,88 +126,363 @@ export const gerarPDFData = (
   };
 };
 
+export interface ExcelColumnOption {
+  id: string;
+  label: string;
+  category: string;
+  description?: string;
+  defaultSelected: boolean;
+  wch: number;
+  getValue: (s: ServicoItem, idx: number, userEmail: string) => any;
+}
+
+export const EXCEL_COLUMNS: ExcelColumnOption[] = [
+  // Categoria: Identificação & Serviço
+  {
+    id: 'index',
+    label: '#',
+    category: 'Identificação & Serviço',
+    description: 'Numeração sequencial do registro',
+    defaultSelected: true,
+    wch: 5,
+    getValue: (_, idx) => idx + 1
+  },
+  {
+    id: 'data',
+    label: 'Data',
+    category: 'Identificação & Serviço',
+    description: 'Data de realização do serviço',
+    defaultSelected: true,
+    wch: 12,
+    getValue: (s) => (s.data ? new Date(s.data + 'T00:00:00').toLocaleDateString('pt-BR') : '')
+  },
+  {
+    id: 'tecnicoNome',
+    label: 'Nome do Técnico',
+    category: 'Identificação & Serviço',
+    description: 'Nome registrado do técnico',
+    defaultSelected: true,
+    wch: 22,
+    getValue: (s) => s.userName || ''
+  },
+  {
+    id: 'tecnicoEmail',
+    label: 'E-mail do Técnico',
+    category: 'Identificação & Serviço',
+    description: 'E-mail da conta do técnico',
+    defaultSelected: false,
+    wch: 25,
+    getValue: (s, _, userEmail) => s.userEmail || userEmail
+  },
+  {
+    id: 'tipoAtividade',
+    label: 'Tipo de Atividade',
+    category: 'Identificação & Serviço',
+    description: 'Instalação, Manutenção, Suporte, etc.',
+    defaultSelected: true,
+    wch: 18,
+    getValue: (s) => s.tipoAtividade || 'INSTALAÇÃO'
+  },
+  {
+    id: 'tipoServico',
+    label: 'Tipo de Serviço',
+    category: 'Identificação & Serviço',
+    description: 'Instalação, Reparo, Mudança de Endereço...',
+    defaultSelected: true,
+    wch: 22,
+    getValue: (s) => s.tipoServico || ''
+  },
+  {
+    id: 'operadora',
+    label: 'Operadora',
+    category: 'Identificação & Serviço',
+    description: 'TIM, NIO, ALGAR, LIGA, etc.',
+    defaultSelected: true,
+    wch: 14,
+    getValue: (s) => s.operadora || ''
+  },
+  {
+    id: 'valor',
+    label: 'Valor (R$)',
+    category: 'Identificação & Serviço',
+    description: 'Valor calculado da remuneração',
+    defaultSelected: true,
+    wch: 12,
+    getValue: (s) => getValorServico(s)
+  },
+
+  // Categoria: Cliente & OS
+  {
+    id: 'numeroSA',
+    label: 'Nº SA',
+    category: 'Cliente & OS',
+    description: 'Número da Solicitação ou Ordem de Serviço',
+    defaultSelected: true,
+    wch: 16,
+    getValue: (s) => s.dadosVisita?.numeroSA || ''
+  },
+  {
+    id: 'acessoGpon',
+    label: 'Acesso GPON',
+    category: 'Cliente & OS',
+    description: 'Código de acesso ou identificador GPON',
+    defaultSelected: true,
+    wch: 16,
+    getValue: (s) => s.dadosVisita?.acessoGpon || ''
+  },
+  {
+    id: 'quemAtendeu',
+    label: 'Quem Atendeu',
+    category: 'Cliente & OS',
+    description: 'Nome da pessoa que atendeu o técnico',
+    defaultSelected: true,
+    wch: 20,
+    getValue: (s) => s.dadosVisita?.quemAtendeu || ''
+  },
+  {
+    id: 'contatoCliente',
+    label: 'Contato Cliente',
+    category: 'Cliente & OS',
+    description: 'Telefone ou WhatsApp de contato',
+    defaultSelected: true,
+    wch: 18,
+    getValue: (s) => s.dadosVisita?.contatoCliente || ''
+  },
+
+  // Categoria: Endereço & Localização
+  {
+    id: 'endereco',
+    label: 'Endereço',
+    category: 'Endereço & Localização',
+    description: 'Rua, Avenida ou Logradouro',
+    defaultSelected: true,
+    wch: 30,
+    getValue: (s) => s.localizacao?.endereco || ''
+  },
+  {
+    id: 'numero',
+    label: 'Número',
+    category: 'Endereço & Localização',
+    description: 'Número do imóvel / residência',
+    defaultSelected: true,
+    wch: 10,
+    getValue: (s) => s.localizacao?.numero || ''
+  },
+  {
+    id: 'bairro',
+    label: 'Bairro',
+    category: 'Endereço & Localização',
+    description: 'Bairro da instalação',
+    defaultSelected: true,
+    wch: 18,
+    getValue: (s) => s.localizacao?.bairro || ''
+  },
+  {
+    id: 'cidade',
+    label: 'Cidade',
+    category: 'Endereço & Localização',
+    description: 'Cidade da instalação',
+    defaultSelected: true,
+    wch: 18,
+    getValue: (s) => s.localizacao?.cidade || ''
+  },
+  {
+    id: 'estado',
+    label: 'Estado',
+    category: 'Endereço & Localização',
+    description: 'UF do estado',
+    defaultSelected: true,
+    wch: 8,
+    getValue: (s) => s.localizacao?.estado || ''
+  },
+
+  // Categoria: Fibra & Metragens
+  {
+    id: 'metrosUtilizados',
+    label: 'Metros Utilizados (m)',
+    category: 'Fibra & Metragens',
+    description: 'Metragem gasta (Final - Inicial)',
+    defaultSelected: true,
+    wch: 20,
+    getValue: (s) => {
+      const m = calcularMetragemUtilizada(s.dadosVisita);
+      return m !== null ? m : '';
+    }
+  },
+  {
+    id: 'metragemRolo',
+    label: 'Metragem Rolo (m)',
+    category: 'Fibra & Metragens',
+    description: 'Tamanho total do rolo / bobina',
+    defaultSelected: false,
+    wch: 18,
+    getValue: (s) => s.dadosVisita?.metragemRolo ?? ''
+  },
+  {
+    id: 'metragemInicial',
+    label: 'Metragem Inicial (m)',
+    category: 'Fibra & Metragens',
+    description: 'Marcação inicial no cabo',
+    defaultSelected: false,
+    wch: 18,
+    getValue: (s) => s.dadosVisita?.metragemInicial ?? ''
+  },
+  {
+    id: 'metragemFinal',
+    label: 'Metragem Final (m)',
+    category: 'Fibra & Metragens',
+    description: 'Marcação final no cabo',
+    defaultSelected: false,
+    wch: 18,
+    getValue: (s) => s.dadosVisita?.metragemFinal ?? ''
+  },
+
+  // Categoria: Equipamentos & Números de Série
+  {
+    id: 'snOnt',
+    label: 'S/N ONT',
+    category: 'Equipamentos & Números de Série',
+    description: 'Número de série da ONT instalada',
+    defaultSelected: true,
+    wch: 18,
+    getValue: (s) => s.dadosVisita?.snOnt || ''
+  },
+  {
+    id: 'snMesh',
+    label: 'S/N Mesh',
+    category: 'Equipamentos & Números de Série',
+    description: 'Número de série do roteador Mesh',
+    defaultSelected: false,
+    wch: 18,
+    getValue: (s) => s.dadosVisita?.snMesh || ''
+  },
+  {
+    id: 'snDrop',
+    label: 'S/N Drop',
+    category: 'Equipamentos & Números de Série',
+    description: 'Serial ou identificador do drop',
+    defaultSelected: false,
+    wch: 18,
+    getValue: (s) => s.dadosVisita?.snDrop || ''
+  },
+
+  // Categoria: Caixa & Rede Externa
+  {
+    id: 'tipoCdoe',
+    label: 'Tipo de Caixa',
+    category: 'Caixa & Rede Externa',
+    description: 'Tipo da caixa (CDOE ou CDOI)',
+    defaultSelected: true,
+    wch: 14,
+    getValue: (s) => s.dadosVisita?.tipoCdoe || 'CDOE'
+  },
+  {
+    id: 'numCdoe',
+    label: 'Nº Caixa',
+    category: 'Caixa & Rede Externa',
+    description: 'Número de identificação da caixa',
+    defaultSelected: true,
+    wch: 10,
+    getValue: (s) => s.dadosVisita?.numCdoe ?? ''
+  },
+  {
+    id: 'portaUtilizada',
+    label: 'Porta Utilizada',
+    category: 'Caixa & Rede Externa',
+    description: 'Porta utilizada no splitter da caixa',
+    defaultSelected: true,
+    wch: 14,
+    getValue: (s) => s.dadosVisita?.portaUtilizada ?? ''
+  },
+
+  // Categoria: Materiais Utilizados
+  {
+    id: 'qtdConector',
+    label: 'Qtd Conector',
+    category: 'Materiais Utilizados',
+    description: 'Quantidade de conectores montados',
+    defaultSelected: false,
+    wch: 13,
+    getValue: (s) => s.dadosVisita?.qtdConector ?? ''
+  },
+  {
+    id: 'qtdEsticador',
+    label: 'Qtd Esticador',
+    category: 'Materiais Utilizados',
+    description: 'Quantidade de esticadores/alças',
+    defaultSelected: false,
+    wch: 13,
+    getValue: (s) => s.dadosVisita?.qtdEsticador ?? ''
+  },
+  {
+    id: 'plaqueta',
+    label: 'Plaqueta',
+    category: 'Materiais Utilizados',
+    description: 'Plaqueta de identificação utilizada',
+    defaultSelected: false,
+    wch: 10,
+    getValue: (s) => s.dadosVisita?.plaqueta ?? ''
+  },
+  {
+    id: 'kitFixaFio',
+    label: 'Kit Fixa Fio',
+    category: 'Materiais Utilizados',
+    description: 'Fixa fio / grampos utilizados',
+    defaultSelected: false,
+    wch: 13,
+    getValue: (s) => s.dadosVisita?.kitFixaFio ?? ''
+  },
+
+  // Categoria: Observações & Mídia
+  {
+    id: 'observacoes',
+    label: 'Observações',
+    category: 'Observações & Mídia',
+    description: 'Anotações gerais do serviço',
+    defaultSelected: true,
+    wch: 28,
+    getValue: (s) => s.observacoes || ''
+  },
+  {
+    id: 'qtdFotos',
+    label: 'Qtd Fotos',
+    category: 'Observações & Mídia',
+    description: 'Quantidade de fotos anexadas',
+    defaultSelected: false,
+    wch: 10,
+    getValue: (s) => (s.fotos ? s.fotos.length : 0)
+  }
+];
+
 export const gerarExcelData = (
   servicos: ServicoItem[],
-  userEmail: string
+  userEmail: string,
+  colunasSelecionadasIds?: string[]
 ): ExportData => {
-  const rows = servicos.map((s, idx) => {
-    const metrosUtilizados = calcularMetragemUtilizada(s.dadosVisita);
+  // Determinar quais colunas usar
+  let colunasAtivas: ExcelColumnOption[] = [];
+  if (colunasSelecionadasIds && colunasSelecionadasIds.length > 0) {
+    colunasAtivas = EXCEL_COLUMNS.filter((col) => colunasSelecionadasIds.includes(col.id));
+  }
+  // Se não foi passada seleção ou nenhuma bateu, usa todas as colunas
+  if (colunasAtivas.length === 0) {
+    colunasAtivas = EXCEL_COLUMNS;
+  }
 
-    return {
-      '#': idx + 1,
-      'Data': s.data ? new Date(s.data + 'T00:00:00').toLocaleDateString('pt-BR') : '',
-      'Tipo de Atividade': s.tipoAtividade || 'INSTALAÇÃO',
-      'Tipo de Serviço': s.tipoServico,
-      'Operadora': s.operadora,
-      'Valor (R$)': getValorServico(s),
-      'Nº SA': s.dadosVisita?.numeroSA || '',
-      'Acesso GPON': s.dadosVisita?.acessoGpon || '',
-      'Quem Atendeu': s.dadosVisita?.quemAtendeu || '',
-      'Contato Cliente': s.dadosVisita?.contatoCliente || '',
-      'Endereço': s.localizacao?.endereco || '',
-      'Número': s.localizacao?.numero || '',
-      'Bairro': s.localizacao?.bairro || '',
-      'Cidade': s.localizacao?.cidade || '',
-      'Estado': s.localizacao?.estado || '',
-      'Metragem Rolo (m)': s.dadosVisita?.metragemRolo ?? '',
-      'Metragem Inicial (m)': s.dadosVisita?.metragemInicial ?? '',
-      'Metragem Final (m)': s.dadosVisita?.metragemFinal ?? '',
-      'Metros Utilizados (m)': metrosUtilizados !== null ? metrosUtilizados : '',
-      'S/N ONT': s.dadosVisita?.snOnt || '',
-      'S/N Mesh': s.dadosVisita?.snMesh || '',
-      'S/N Drop': s.dadosVisita?.snDrop || '',
-      'Qtd Conector': s.dadosVisita?.qtdConector ?? '',
-      'Qtd Esticador': s.dadosVisita?.qtdEsticador ?? '',
-      'Plaqueta': s.dadosVisita?.plaqueta ?? '',
-      'Kit Fixa Fio': s.dadosVisita?.kitFixaFio ?? '',
-      'Tipo de Caixa': s.dadosVisita?.tipoCdoe || 'CDOE',
-      'Nº Caixa': s.dadosVisita?.numCdoe ?? '',
-      'Porta Utilizada': s.dadosVisita?.portaUtilizada ?? '',
-      'Observações': s.observacoes || '',
-      'Qtd Fotos': s.fotos ? s.fotos.length : 0,
-      'Técnico Email': s.userEmail || userEmail
-    };
+  const rows = servicos.map((s, idx) => {
+    const rowObj: Record<string, any> = {};
+    for (const col of colunasAtivas) {
+      rowObj[col.label] = col.getValue(s, idx, userEmail);
+    }
+    return rowObj;
   });
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Servicos');
 
-  // Ajustar larguras das colunas
-  const wscols = [
-    { wch: 5 },  // #
-    { wch: 12 }, // Data
-    { wch: 16 }, // Tipo Atividade
-    { wch: 22 }, // Tipo Servico
-    { wch: 12 }, // Operadora
-    { wch: 12 }, // Valor (R$)
-    { wch: 15 }, // SA
-    { wch: 15 }, // GPON
-    { wch: 20 }, // Atendeu
-    { wch: 16 }, // Contato
-    { wch: 30 }, // Endereço
-    { wch: 10 }, // Numero
-    { wch: 18 }, // Bairro
-    { wch: 18 }, // Cidade
-    { wch: 8 },  // Estado
-    { wch: 18 }, // Metragem Rolo (m)
-    { wch: 18 }, // Metragem Inicial (m)
-    { wch: 18 }, // Metragem Final (m)
-    { wch: 20 }, // Metros Utilizados (m)
-    { wch: 18 }, // S/N ONT
-    { wch: 18 }, // S/N Mesh
-    { wch: 18 }, // S/N Drop
-    { wch: 13 }, // Qtd Conector
-    { wch: 13 }, // Qtd Esticador
-    { wch: 10 }, // Plaqueta
-    { wch: 13 }, // Kit Fixa Fio
-    { wch: 14 }, // Tipo de Caixa
-    { wch: 10 }, // Nº Caixa
-    { wch: 14 }, // Porta Utilizada
-    { wch: 25 }, // Observações
-    { wch: 10 }, // Qtd Fotos
-    { wch: 25 }  // Técnico Email
-  ];
+  // Ajustar larguras das colunas ativas
+  const wscols = colunasAtivas.map((c) => ({ wch: c.wch }));
   worksheet['!cols'] = wscols;
 
   const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
