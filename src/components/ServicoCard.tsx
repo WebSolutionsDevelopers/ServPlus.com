@@ -113,6 +113,15 @@ export const ServicoCard: React.FC<ServicoCardProps> = ({
           </div>
         )}
 
+        {/* Técnico Responsável */}
+        {(servico.userName || servico.userEmail) && (
+          <div className="flex items-center gap-1.5 text-slate-400 text-[11px] pt-1 border-t border-slate-800/50">
+            <User className="w-3 h-3 text-blue-400 shrink-0" />
+            <span className="truncate">
+              Técnico: <strong className="text-slate-300 font-semibold">{servico.userName || servico.userEmail}</strong>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Footer / Meta and Action Buttons */}
