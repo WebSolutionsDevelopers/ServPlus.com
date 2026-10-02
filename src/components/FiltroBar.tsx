@@ -1,17 +1,31 @@
 import React from 'react';
-import { Filter, Calendar, RefreshCw, Layers } from 'lucide-react';
-import { FiltroState, PresetFiltroData } from '../types';
+import { Filter, Calendar, RefreshCw, Layers, Crown, Users } from 'lucide-react';
+import { FiltroState, PresetFiltroData, UsuarioItem } from '../types';
 
 interface FiltroBarProps {
   filtro: FiltroState;
   onChangeFiltro: (novoFiltro: FiltroState) => void;
   onResetFiltro: () => void;
+  isAdmin?: boolean;
+  usuarios?: UsuarioItem[];
+  usuarioSelecionadoId?: string;
+  onChangeUsuario?: (novoUsuarioId: string) => void;
+  currentUserId?: string;
+  currentUserName?: string;
+  carregandoServicosAdmin?: boolean;
 }
 
 export const FiltroBar: React.FC<FiltroBarProps> = ({
   filtro,
   onChangeFiltro,
-  onResetFiltro
+  onResetFiltro,
+  isAdmin = false,
+  usuarios = [],
+  usuarioSelecionadoId = 'todos',
+  onChangeUsuario,
+  currentUserId,
+  currentUserName,
+  carregandoServicosAdmin = false
 }) => {
   // Helper para obter datas formatadas YYYY-MM-DD em fuso local
   const getFormattedDate = (date: Date): string => {
@@ -101,6 +115,60 @@ export const FiltroBar: React.FC<FiltroBarProps> = ({
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-lg space-y-4">
       
+      {/* Barra de Seleção de Usuário Exclusiva para Administrador */}
+      {isAdmin && onChangeUsuario && (
+        <div className="bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border border-blue-500/40 rounded-xl p-3.5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-300 shrink-0 shadow-sm">
+              <Crown className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white tracking-wide">Consultar Registros por Técnico</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                  Admin
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Selecione um técnico para auditar os registros individuais ou consulte toda a equipe unificada.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative w-full md:w-80">
+              <select
+                value={usuarioSelecionadoId}
+                onChange={(e) => onChangeUsuario(e.target.value)}
+                disabled={carregandoServicosAdmin}
+                className="w-full px-3 py-2 bg-slate-900 border border-blue-500/50 rounded-xl text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner cursor-pointer"
+              >
+                <option value="todos">👥 Todos os Técnicos (Visão Geral da Equipe)</option>
+                {currentUserId && (
+                  <option value={currentUserId}>
+                    👤 Meus Registros ({currentUserName || 'Administrador'})
+                  </option>
+                )}
+                {usuarios && usuarios.filter((u) => u.uid !== currentUserId).length > 0 && (
+                  <optgroup label="Técnicos Cadastrados">
+                    {usuarios
+                      .filter((u) => u.uid !== currentUserId)
+                      .map((u) => (
+                        <option key={u.uid} value={u.uid}>
+                          🔧 {u.nome} ({u.email})
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+            {carregandoServicosAdmin && (
+              <RefreshCw className="w-4 h-4 text-blue-400 animate-spin shrink-0" title="Carregando..." />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Linha 1: Título e Botões Rápidos */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
         
