@@ -123,29 +123,17 @@ function cleanForFirestore<T>(obj: T): T {
   return obj;
 }
 
-const getMigratedKey = (userId: string) => `cadservicos_migrated_${userId}`;
-
 /**
  * Migra de forma transparente os dados da coleção legada 'servicos' para a subcoleção 'usuarios/{userId}/servicos'
- * OTIMIZADO: Só executa uma única vez por usuário (marcado no localStorage) para evitar checagens e gravações repetidas.
  */
 export const migrarServicosLegadosParaSubcolecao = async (userId: string): Promise<ServicoItem[]> => {
   if (!userId) return [];
-
-  const migratedKey = getMigratedKey(userId);
-  if (localStorage.getItem(migratedKey) === 'done') {
-    return [];
-  }
-
   const oldColRef = collection(db, 'servicos');
   const q = query(oldColRef, where('userId', '==', userId));
 
   try {
     const snap = await getDocs(q);
-    if (snap.empty) {
-      localStorage.setItem(migratedKey, 'done');
-      return [];
-    }
+    if (snap.empty) return [];
 
     console.log(`[Migração] Encontrados ${snap.size} registros na coleção antiga 'servicos' para o usuário ${userId}. Migrando...`);
     const migrados: ServicoItem[] = [];
@@ -170,7 +158,6 @@ export const migrarServicosLegadosParaSubcolecao = async (userId: string): Promi
       });
     }
 
-    localStorage.setItem(migratedKey, 'done');
     console.log(`[Migração] Migração concluída com sucesso para ${migrados.length} registros.`);
     return migrados;
   } catch (err) {
@@ -234,8 +221,7 @@ export const atualizarServico = async (
 };
 
 /**
- * Exclui um serviço da subcoleção do usuário
- * OTIMIZADO: Executa apenas 1 escrita de exclusão direta.
+ * Exclui um serviço da subcoleção do usuário (e da coleção antiga se ainda existir lá)
  */
 export const excluirServico = async (id: string, userIdParam?: string): Promise<void> => {
   const currentUserId = userIdParam || auth.currentUser?.uid;
@@ -246,6 +232,13 @@ export const excluirServico = async (id: string, userIdParam?: string): Promise<
   try {
     const docRef = getUserServicoDoc(currentUserId, id);
     await deleteDoc(docRef);
+
+    // Tenta remover também da coleção antiga por garantia
+    try {
+      await deleteDoc(doc(db, 'servicos', id));
+    } catch (e) {
+      // Ignorar se já não existir
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `usuarios/${currentUserId}/servicos/${id}`);
     throw error;
