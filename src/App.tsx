@@ -21,7 +21,6 @@ import { ServicoCard } from './components/ServicoCard';
 import { ServicoFormModal } from './components/ServicoFormModal';
 import { ServicoDetailModal } from './components/ServicoDetailModal';
 import { ExportOptionsModal } from './components/ExportOptionsModal';
-import { ExportExcelModal } from './components/ExportExcelModal';
 import { TelegramConfigModal } from './components/TelegramConfigModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
 import { ensureTelegramConfig } from './utils/telegramUtils';
@@ -71,7 +70,6 @@ export default function App() {
   const [servicoParaEditar, setServicoParaEditar] = useState<ServicoItem | null>(null);
   const [servicoParaDetalhe, setServicoParaDetalhe] = useState<ServicoItem | null>(null);
   const [exportData, setExportData] = useState<ExportData | null>(null);
-  const [exportExcelModalAberto, setExportExcelModalAberto] = useState(false);
   const [telegramConfigAberto, setTelegramConfigAberto] = useState(false);
 
   // Monitorar Eventos de Instalação do PWA
@@ -239,8 +237,8 @@ export default function App() {
   const getPeriodoDescricao = () => {
     if (filtro.preset === 'hoje') return 'Hoje';
     if (filtro.preset === 'ontem') return 'Ontem';
-    if (filtro.preset === '7dias') return '7 dias';
-    if (filtro.preset === '30dias') return '30 dias';
+    if (filtro.preset === '7dias') return 'Últimos 7 dias';
+    if (filtro.preset === '30dias') return 'Últimos 30 dias';
     if (filtro.preset === 'mes' && filtro.mesAno) return `Mês ${filtro.mesAno}`;
     if (filtro.dataInicio && filtro.dataFim) {
       return `${filtro.dataInicio} até ${filtro.dataFim}`;
@@ -381,7 +379,9 @@ export default function App() {
             )
           )
         }
-        onExportarExcel={() => setExportExcelModalAberto(true)}
+        onExportarExcel={() =>
+          setExportData(gerarExcelData(servicosFiltrados, user.email || ''))
+        }
         totalServicos={servicosFiltrados.length}
         onOpenTelegramConfig={() => setTelegramConfigAberto(true)}
         onOpenPwaModal={() => setPwaModalAberto(true)}
@@ -410,8 +410,6 @@ export default function App() {
         <MeusGanhosCard
           servicosFiltrados={servicosFiltrados}
           periodoTexto={getPeriodoDescricao()}
-          onSincronizar={handleSincronizarNuvem}
-          sincronizando={sincronizandoNuvem}
         />
 
         {/* Bar de Filtros (Hoje, Ontem, 7d, 30d, Mês, Início/Fim, Atividade) */}
@@ -444,8 +442,18 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2.5 py-1 rounded-full flex items-center gap-1 font-medium">
                 <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400" />
-                Zero Leituras no BD
+                Zero Leituras Firestore
               </span>
+
+              <button
+                onClick={handleSincronizarNuvem}
+                disabled={sincronizandoNuvem}
+                title="Sincronizar dados com a nuvem Firebase"
+                className="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-3 py-1 rounded-full flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${sincronizandoNuvem ? 'animate-spin' : ''}`} />
+                <span>{sincronizandoNuvem ? 'Sincronizando...' : 'Sincronizar'}</span>
+              </button>
             </div>
           </div>
 
@@ -535,14 +543,6 @@ export default function App() {
         onClose={() => setServicoParaDetalhe(null)}
         onDelete={handleExcluirServico}
         onOpenTelegramConfig={() => setTelegramConfigAberto(true)}
-      />
-
-      <ExportExcelModal
-        isOpen={exportExcelModalAberto}
-        onClose={() => setExportExcelModalAberto(false)}
-        servicos={servicosFiltrados}
-        userEmail={user.email || ''}
-        onExportReady={(data) => setExportData(data)}
       />
 
       <ExportOptionsModal
