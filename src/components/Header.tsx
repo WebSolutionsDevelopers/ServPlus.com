@@ -17,7 +17,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { isUserAdmin } from '../utils/adminUtils';
-import { BackendType, PHP_API_BASE_URL } from '../config/backendConfig';
+
 
 interface HeaderProps {
   user: User | { uid: string; email?: string | null; displayName?: string | null };
@@ -48,8 +48,6 @@ export const Header: React.FC<HeaderProps> = ({
   onSincronizar,
   sincronizando = false,
   isPwaInstalled = false,
-  backend = 'mysql',
-  onToggleBackend,
   onSignOut
 }) => {
   const isAdmin = isUserAdmin(user.email);
@@ -81,27 +79,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 className="text-lg font-bold text-white tracking-tight leading-tight">
                   Serviços do Dia
                 </h1>
-                {/* Badge do Servidor Ativo */}
-                {onToggleBackend ? (
-                  <button
-                    type="button"
-                    onClick={onToggleBackend}
-                    title={`Clique para alternar o servidor (Ativo: ${backend === 'mysql' ? 'MySQL em ' + PHP_API_BASE_URL : 'Firebase'})`}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border transition cursor-pointer ${
-                      backend === 'mysql'
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
-                    }`}
-                  >
-                    <Database className="w-3 h-3" />
-                    <span>{backend === 'mysql' ? 'MySQL (Hostinger)' : 'Firebase'}</span>
-                  </button>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    <Database className="w-3 h-3" />
-                    <span>{backend === 'mysql' ? 'MySQL' : 'Firebase'}</span>
-                  </span>
-                )}
               </div>
               <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                 <UserIcon className="w-3 h-3 text-slate-500" />
