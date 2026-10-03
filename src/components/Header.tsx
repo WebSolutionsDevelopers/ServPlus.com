@@ -139,14 +139,14 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Botão Sincronizar com o Banco de Dados */}
           {onSincronizar && (
             <button
-              onClick={onSincronizar}
-              disabled={sincronizando}
-              title={`Sincronizar dados com o banco de dados (${backend === 'mysql' ? 'MySQL' : 'Firebase'})`}
-              className="py-2.5 px-3 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 hover:text-emerald-100 border border-emerald-500/40 font-semibold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${sincronizando ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{sincronizando ? 'Sincronizando...' : 'Sincronizar'}</span>
-            </button>
+                onClick={handleSincronizarNuvem}
+                disabled={sincronizandoNuvem}
+                title="Sincronizar dados com a nuvem Firebase"
+                className="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-3 py-1 rounded-full flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${sincronizandoNuvem ? 'animate-spin' : ''}`} />
+                <span>{sincronizandoNuvem ? 'Sincronizando...' : 'Sincronizar'}</span>
+              </button>
           )}
 
           {/* Botão de Migração do Firebase para o MySQL */}
