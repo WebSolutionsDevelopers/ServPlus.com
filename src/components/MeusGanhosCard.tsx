@@ -41,6 +41,18 @@ export const MeusGanhosCard: React.FC<MeusGanhosCardProps> = ({
               R$ {totalGanhos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
           </div>
+          {onSincronizar && (
+  <button
+    type="button"
+    onClick={onSincronizar}
+    disabled={sincronizando}
+    title="Sincronizar dados com o Firebase"
+    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 hover:text-emerald-100 border border-emerald-500/40 text-xs font-semibold transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
+  >
+    <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${sincronizando ? 'animate-spin' : ''}`} />
+    <span>{sincronizando ? 'Sincronizando...' : 'Sincronizar'}</span>
+  </button>
+)}
 
           <p className="text-xs text-slate-400 mt-1">
             Valor acumulado com base no filtro aplicado ({servicosFiltrados.length} serviço{servicosFiltrados.length === 1 ? '' : 's'})
