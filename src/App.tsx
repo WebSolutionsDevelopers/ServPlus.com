@@ -38,7 +38,6 @@ export default function App() {
   const [servicos, setServicos] = useState<ServicoItem[]>([]);
   const [carregandoServicos, setCarregandoServicos] = useState(true);
   const [sincronizandoNuvem, setSincronizandoNuvem] = useState(false);
-const [mensagemSucesso, setMensagemSucesso] = useState('');
 
   // Controle de Administrador & Seleção de Usuários
   const isAdmin = isUserAdmin(user?.email);
