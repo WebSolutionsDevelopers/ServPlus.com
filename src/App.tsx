@@ -8,13 +8,10 @@ import {
   salvarServicosLocais,
   salvarServico,
   atualizarServico,
-  excluirServico,
-  carregarTodosServicosAdmin,
-  carregarServicosDoUsuario
+  excluirServico
 } from './lib/servicosService';
-import { ServicoItem, FiltroState, UsuarioItem } from './types';
+import { ServicoItem, FiltroState } from './types';
 import { isInstalacao, getValorServico, normalizeText, matchTipoServicoOuAtividade } from './utils/servicoUtils';
-import { isUserAdmin } from './utils/adminUtils';
 import { AuthScreen } from './components/AuthScreen';
 import { Header } from './components/Header';
 import { MeusGanhosCard } from './components/MeusGanhosCard';
@@ -24,11 +21,10 @@ import { ServicoCard } from './components/ServicoCard';
 import { ServicoFormModal } from './components/ServicoFormModal';
 import { ServicoDetailModal } from './components/ServicoDetailModal';
 import { ExportOptionsModal } from './components/ExportOptionsModal';
-import { ExportExcelModal } from './components/ExportExcelModal';
 import { TelegramConfigModal } from './components/TelegramConfigModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
 import { ensureTelegramConfig } from './utils/telegramUtils';
-import { registrarOuAtualizarUsuario, listarTodosUsuarios } from './lib/usuariosService';
+import { registrarOuAtualizarUsuario } from './lib/usuariosService';
 import { gerarPDFData, gerarExcelData, ExportData } from './utils/exportUtils';
 import { Wrench, PlusCircle, AlertCircle, CheckCircle, Search, HardDrive, RefreshCw, Zap, Download, Smartphone } from 'lucide-react';
 
@@ -38,11 +34,6 @@ export default function App() {
   const [servicos, setServicos] = useState<ServicoItem[]>([]);
   const [carregandoServicos, setCarregandoServicos] = useState(true);
   const [sincronizandoNuvem, setSincronizandoNuvem] = useState(false);
-
-  // Controle de Administrador & Seleção de Usuários
-  const isAdmin = isUserAdmin(user?.email);
-  const [usuariosCadastrados, setUsuariosCadastrados] = useState<UsuarioItem[]>([]);
-  const [usuarioSelecionadoId, setUsuarioSelecionadoId] = useState<string>('');
 
   // PWA State
   const [pwaModalAberto, setPwaModalAberto] = useState(false);
@@ -79,7 +70,6 @@ export default function App() {
   const [servicoParaEditar, setServicoParaEditar] = useState<ServicoItem | null>(null);
   const [servicoParaDetalhe, setServicoParaDetalhe] = useState<ServicoItem | null>(null);
   const [exportData, setExportData] = useState<ExportData | null>(null);
-  const [exportExcelModalAberto, setExportExcelModalAberto] = useState(false);
   const [telegramConfigAberto, setTelegramConfigAberto] = useState(false);
 
   // Monitorar Eventos de Instalação do PWA
@@ -119,7 +109,6 @@ export default function App() {
       setUser(currentUser);
       setAuthCarregando(false);
       if (currentUser) {
-        setUsuarioSelecionadoId(currentUser.uid);
         registrarOuAtualizarUsuario({
           uid: currentUser.uid,
           email: currentUser.email,
@@ -136,129 +125,53 @@ export default function App() {
     ensureTelegramConfig().catch(() => {});
   }, []);
 
-  // Carregar lista de usuários para Administrador
-  useEffect(() => {
-    if (user && isAdmin) {
-      listarTodosUsuarios()
-        .then((users) => {
-          setUsuariosCadastrados(users);
-        })
-        .catch((err) => console.warn('Erro ao carregar lista de usuários para admin:', err));
-    } else {
-      setUsuariosCadastrados([]);
-    }
-  }, [user, isAdmin]);
-
-  // Carregar Serviços (por usuário ou consolidado de todos se admin)
+  // Carregar Serviços com Estratégia Zero-Leituras (LocalStorage -> Cache -> Fallback)
   const userId = user?.uid;
 
   useEffect(() => {
-    if (!userId || !usuarioSelecionadoId) {
-      if (!userId) {
-        setServicos([]);
-        setCarregandoServicos(false);
-      }
+    if (!userId) {
+      setServicos([]);
+      setCarregandoServicos(false);
       return;
     }
 
-    let isMounted = true;
+    // 1. Carrega do localStorage imediatamente (0 ms, 0 leituras)
+    const locais = getServicosLocais(userId);
+    if (locais.length > 0) {
+      setServicos(locais);
+      setCarregandoServicos(false);
+    } else {
+      setCarregandoServicos(true);
+    }
 
-    const carregar = async () => {
-      // 1. Consulta própria (usuário comum ou admin visualizando seus próprios serviços)
-      if (usuarioSelecionadoId === userId) {
-        const locais = getServicosLocais(userId);
-        if (locais.length > 0) {
-          if (isMounted) {
-            setServicos(locais);
-            setCarregandoServicos(false);
-          }
-          return;
-        }
-
-        if (isMounted) setCarregandoServicos(true);
-        try {
-          const dados = await carregarServicosComZeroLeituras(userId);
-          if (isMounted) {
-            setServicos(dados);
-            setCarregandoServicos(false);
-          }
-        } catch (err) {
-          console.error('Erro ao carregar serviços com zero leituras:', err);
-          if (isMounted) setCarregandoServicos(false);
-        }
-        return;
-      }
-
-      // 2. Admin visualizando toda a equipe ('todos')
-      if (isAdmin && usuarioSelecionadoId === 'todos') {
-        if (isMounted) setCarregandoServicos(true);
-        try {
-          const dados = await carregarTodosServicosAdmin(usuariosCadastrados);
-          if (isMounted) {
-            setServicos(dados);
-            setCarregandoServicos(false);
-          }
-        } catch (err) {
-          console.error('Erro ao carregar todos os serviços para admin:', err);
-          if (isMounted) setCarregandoServicos(false);
-        }
-        return;
-      }
-
-      // 3. Admin visualizando outro técnico específico
-      if (isAdmin && usuarioSelecionadoId) {
-        const locais = getServicosLocais(usuarioSelecionadoId);
-        if (locais.length > 0) {
-          if (isMounted) {
-            setServicos(locais);
-            setCarregandoServicos(false);
-          }
-          return;
-        }
-
-        if (isMounted) setCarregandoServicos(true);
-        try {
-          const dados = await carregarServicosDoUsuario(usuarioSelecionadoId);
-          if (isMounted) {
-            setServicos(dados);
-            setCarregandoServicos(false);
-          }
-        } catch (err) {
-          console.error('Erro ao carregar serviços do técnico selecionado:', err);
-          if (isMounted) setCarregandoServicos(false);
-        }
-      }
-    };
-
-    carregar();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [userId, isAdmin, usuarioSelecionadoId]);
-
-  // Handler para alternar técnico selecionado pelo Administrador
-  const handleMudarUsuarioSelecionado = (novoUid: string) => {
-    setUsuarioSelecionadoId(novoUid);
-  };
+    // 2. Tenta carregar do cache offline do Firestore com 0 leituras do servidor
+    carregarServicosComZeroLeituras(userId)
+      .then((dados) => {
+        setServicos(dados);
+        setCarregandoServicos(false);
+      })
+      .catch((err) => {
+        console.error('Erro ao carregar serviços com zero leituras:', err);
+        setCarregandoServicos(false);
+      });
+  }, [userId]);
 
   // Função para ressincronizar manualmente com a nuvem quando desejado
   const handleSincronizarNuvem = async () => {
-  if (!userId) return;
-  setSincronizandoNuvem(true);
-  try {
-    // Busca os dados diretamente do servidor do Firebase (subcoleção do usuário)
-    const dadosNuvem = await sincronizarServicosDoServidor(userId);
-    setServicos(dadosNuvem);
-    setMensagemSucesso('Serviços sincronizados com a nuvem!');
-    setTimeout(() => setMensagemSucesso(''), 4000);
-  } catch (err) {
-    console.error('Erro ao sincronizar com nuvem:', err);
-    alert('Não foi possível sincronizar com a nuvem.');
-  } finally {
-    setSincronizandoNuvem(false);
-  }
-};
+    if (!userId) return;
+    setSincronizandoNuvem(true);
+    try {
+      const dadosNuvem = await sincronizarServicosDoServidor(userId);
+      setServicos(dadosNuvem);
+      setMensagemSucesso('Serviços sincronizados com a nuvem!');
+      setTimeout(() => setMensagemSucesso(''), 4000);
+    } catch (err) {
+      console.error('Erro ao sincronizar com nuvem:', err);
+      alert('Não foi possível sincronizar com a nuvem.');
+    } finally {
+      setSincronizandoNuvem(false);
+    }
+  };
 
   // Filtragem dos serviços cadastrados
   const servicosFiltrados = servicos.filter((s) => {
@@ -324,8 +237,8 @@ export default function App() {
   const getPeriodoDescricao = () => {
     if (filtro.preset === 'hoje') return 'Hoje';
     if (filtro.preset === 'ontem') return 'Ontem';
-    if (filtro.preset === '7dias') return '7 dias';
-    if (filtro.preset === '30dias') return '30 dias';
+    if (filtro.preset === '7dias') return 'Últimos 7 dias';
+    if (filtro.preset === '30dias') return 'Últimos 30 dias';
     if (filtro.preset === 'mes' && filtro.mesAno) return `Mês ${filtro.mesAno}`;
     if (filtro.dataInicio && filtro.dataFim) {
       return `${filtro.dataInicio} até ${filtro.dataFim}`;
@@ -341,13 +254,9 @@ export default function App() {
     try {
       if (servicoParaEditar && servicoParaEditar.id) {
         const editId = servicoParaEditar.id;
-        const anoMes = servicoData.data ? servicoData.data.slice(0, 7) : servicoParaEditar.mesAno;
         const servicoAtualizado: ServicoItem = {
           ...servicoParaEditar,
-          ...servicoData,
-          mesAno: anoMes,
-          ano: anoMes ? parseInt(anoMes.split('-')[0], 10) : undefined,
-          mes: anoMes ? parseInt(anoMes.split('-')[1], 10) : undefined,
+          ...servicoData
         };
 
         // Atualização local imediata (0 leituras)
@@ -359,15 +268,11 @@ export default function App() {
         await atualizarServico(editId, servicoData, userId);
         setMensagemSucesso('Serviço atualizado com sucesso!');
       } else {
-        // Envia criação para o Firestore particionado por mês (1 escrita, 0 leituras)
+        // Envia criação para o Firestore (1 escrita, 0 leituras)
         const newId = await salvarServico(servicoData);
-        const anoMes = servicoData.data ? servicoData.data.slice(0, 7) : new Date().toISOString().slice(0, 7);
         const novoServico: ServicoItem = {
           id: newId,
           ...servicoData,
-          mesAno: anoMes,
-          ano: parseInt(anoMes.split('-')[0], 10),
-          mes: parseInt(anoMes.split('-')[1], 10),
           createdAt: Date.now()
         };
 
@@ -414,33 +319,18 @@ export default function App() {
   const handleExcluirServico = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este registro de serviço?')) {
       try {
-        const itemToDelete = servicos.find((s) => s.id === id);
-        const targetUserId = itemToDelete?.userId || userId;
         // Exclusão local imediata (0 leituras)
         const novaLista = servicos.filter((s) => s.id !== id);
         setServicos(novaLista);
-        if (targetUserId) salvarServicosLocais(targetUserId, novaLista);
+        if (userId) salvarServicosLocais(userId, novaLista);
 
         // Envia exclusão para o Firestore em background
-        if (targetUserId) {
-          await excluirServico(id, targetUserId);
-        }
+        await excluirServico(id, userId);
       } catch (err) {
         console.error('Erro ao excluir:', err);
         alert('Não foi possível excluir o serviço.');
       }
     }
-  };
-
-  const getLabelGanhos = () => {
-    if (!isAdmin || usuarioSelecionadoId === userId) {
-      return 'Meus Ganhos';
-    }
-    if (usuarioSelecionadoId === 'todos') {
-      return 'Faturamento da Equipe';
-    }
-    const u = usuariosCadastrados.find((item) => item.uid === usuarioSelecionadoId);
-    return `Ganhos (${u?.nome || 'Técnico'})`;
   };
 
   const handleResetFiltro = () => {
@@ -489,7 +379,9 @@ export default function App() {
             )
           )
         }
-        onExportarExcel={() => setExportExcelModalAberto(true)}
+        onExportarExcel={() =>
+          setExportData(gerarExcelData(servicosFiltrados, user.email || ''))
+        }
         totalServicos={servicosFiltrados.length}
         onOpenTelegramConfig={() => setTelegramConfigAberto(true)}
         onOpenPwaModal={() => setPwaModalAberto(true)}
@@ -515,25 +407,18 @@ export default function App() {
         )}
 
         {/* Campo "Meus Ganhos" e Estatísticas do Filtro Aplicado */}
-       <MeusGanhosCard
-  servicosFiltrados={servicosFiltrados}
-  periodoTexto={getPeriodoDescricao()}
-  onSincronizar={handleSincronizarNuvem}
-  sincronizando={sincronizandoNuvem}
-/>
+        <MeusGanhosCard
+          servicosFiltrados={servicosFiltrados}
+          periodoTexto={getPeriodoDescricao()}
+          onSincronizar={handleSincronizarNuvem}
+          sincronizando={sincronizandoNuvem}
+        />
 
-        {/* Bar de Filtros (Hoje, Ontem, 7d, 30d, Mês, Início/Fim, Atividade e Seletor de Técnico Admin) */}
+        {/* Bar de Filtros (Hoje, Ontem, 7d, 30d, Mês, Início/Fim, Atividade) */}
         <FiltroBar
           filtro={filtro}
           onChangeFiltro={setFiltro}
           onResetFiltro={handleResetFiltro}
-          isAdmin={isAdmin}
-          usuarios={usuariosCadastrados}
-          usuarioSelecionadoId={usuarioSelecionadoId}
-          onChangeUsuario={handleMudarUsuarioSelecionado}
-          currentUserId={user?.uid}
-          currentUserName={user?.displayName || user?.email?.split('@')[0]}
-          carregandoServicosAdmin={carregandoServicos && usuarioSelecionadoId !== userId}
         />
 
         {/* Barra de Busca de Ordens de Serviço (Acima de Serviços Registrados) */}
@@ -559,8 +444,18 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2.5 py-1 rounded-full flex items-center gap-1 font-medium">
                 <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400" />
-                Zero Leituras no BD
+                Zero Leituras Firestore
               </span>
+
+              <button
+                onClick={handleSincronizarNuvem}
+                disabled={sincronizandoNuvem}
+                title="Sincronizar dados com a nuvem Firebase"
+                className="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-3 py-1 rounded-full flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${sincronizandoNuvem ? 'animate-spin' : ''}`} />
+                <span>{sincronizandoNuvem ? 'Sincronizando...' : 'Sincronizar'}</span>
+              </button>
             </div>
           </div>
 
@@ -650,14 +545,6 @@ export default function App() {
         onClose={() => setServicoParaDetalhe(null)}
         onDelete={handleExcluirServico}
         onOpenTelegramConfig={() => setTelegramConfigAberto(true)}
-      />
-
-      <ExportExcelModal
-        isOpen={exportExcelModalAberto}
-        onClose={() => setExportExcelModalAberto(false)}
-        servicos={servicosFiltrados}
-        userEmail={user.email || ''}
-        onExportReady={(data) => setExportData(data)}
       />
 
       <ExportOptionsModal
