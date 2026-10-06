@@ -516,13 +516,12 @@ const [mensagemSucesso, setMensagemSucesso] = useState('');
         )}
 
         {/* Campo "Meus Ganhos" e Estatísticas do Filtro Aplicado */}
-        <MeusGanhosCard
-          servicosFiltrados={servicosFiltrados}
-          periodoTexto={getPeriodoDescricao()}
-          onSincronizar={handleSincronizarNuvem}
-          sincronizando={sincronizandoNuvem}
-          labelGanhos={getLabelGanhos()}
-        />
+       <MeusGanhosCard
+  servicosFiltrados={servicosFiltrados}
+  periodoTexto={getPeriodoDescricao()}
+  onSincronizar={handleSincronizarNuvem}
+  sincronizando={sincronizandoNuvem}
+/>
 
         {/* Bar de Filtros (Hoje, Ontem, 7d, 30d, Mês, Início/Fim, Atividade e Seletor de Técnico Admin) */}
         <FiltroBar
