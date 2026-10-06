@@ -244,30 +244,30 @@ export default function App() {
 
   // Função para ressincronizar manualmente com a nuvem quando desejado
   const handleSincronizarNuvem = async () => {
-    if (!userId) return;
-    setSincronizandoNuvem(true);
-    try {
-      if (isAdmin && usuarioSelecionadoId === 'todos') {
-        const dadosNuvem = await carregarTodosServicosAdmin(usuariosCadastrados, true);
-        setServicos(dadosNuvem);
-        setMensagemSucesso('Serviços de toda a equipe sincronizados com a nuvem!');
-      } else if (isAdmin && usuarioSelecionadoId !== userId) {
-        const dadosNuvem = await carregarServicosDoUsuario(usuarioSelecionadoId, true);
-        setServicos(dadosNuvem);
-        setMensagemSucesso('Serviços do técnico sincronizados com a nuvem!');
-      } else {
-        const dadosNuvem = await sincronizarServicosDoServidor(userId);
-        setServicos(dadosNuvem);
-        setMensagemSucesso('Serviços sincronizados com a nuvem!');
-      }
-      setTimeout(() => setMensagemSucesso(''), 4000);
-    } catch (err) {
-      console.error('Erro ao sincronizar com nuvem:', err);
-      alert('Não foi possível sincronizar com a nuvem.');
-    } finally {
-      setSincronizandoNuvem(false);
+  if (!userId) return;
+  setSincronizandoNuvem(true);
+  try {
+    if (isAdmin && usuarioSelecionadoId === 'todos') {
+      const dadosNuvem = await carregarTodosServicosAdmin(usuariosCadastrados, true);
+      setServicos(dadosNuvem);
+      setMensagemSucesso('Serviços de toda a equipe sincronizados com o Firebase!');
+    } else if (isAdmin && usuarioSelecionadoId !== userId) {
+      const dadosNuvem = await carregarServicosDoUsuario(usuarioSelecionadoId, true);
+      setServicos(dadosNuvem);
+      setMensagemSucesso('Serviços do técnico sincronizados com o Firebase!');
+    } else {
+      const dadosNuvem = await sincronizarServicosDoServidor(userId);
+      setServicos(dadosNuvem);
+      setMensagemSucesso('Serviços sincronizados com o Firebase!');
     }
-  };
+    setTimeout(() => setMensagemSucesso(''), 4000);
+  } catch (err) {
+    console.error('Erro ao sincronizar com servidor:', err);
+    alert('Não foi possível sincronizar com o servidor.');
+  } finally {
+    setSincronizandoNuvem(false);
+  }
+};
 
   // Filtragem dos serviços cadastrados
   const servicosFiltrados = servicos.filter((s) => {
