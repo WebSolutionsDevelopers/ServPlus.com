@@ -53,6 +53,16 @@ export const isInstalacao = (s: { tipoServico?: string; tipoAtividade?: string }
 };
 
 /**
+ * Verifica de forma insensível a maiúsculas/minúsculas e acentos se o serviço é uma Mudança de Endereço.
+ */
+export const isMudancaEndereco = (s: { tipoServico?: string; tipoAtividade?: string } | null | undefined): boolean => {
+  if (!s) return false;
+  const serv = normalizeText(s.tipoServico);
+  const ativ = normalizeText(s.tipoAtividade);
+  return serv.includes('MUDAN') || ativ.includes('MUDAN');
+};
+
+/**
  * Retorna o tipo de serviço normalizado para comparações e filtros
  */
 export const matchTipoServicoOuAtividade = (
@@ -89,11 +99,98 @@ export const matchTipoServicoOuAtividade = (
 };
 
 /**
- * Calcula o valor do serviço com fallback para R$ 100 em caso de instalação
+ * Calcula o valor do serviço:
+ * - Instalação: R$ 100,00
+ * - Mudança de Endereço: R$ 100,00
+ * - Outros serviços: R$ 0,00 (ou valor numérico customizado se especificado > 0)
  */
 export const getValorServico = (s: Partial<ServicoItem>): number => {
   if (s.valor !== undefined && s.valor !== null && !isNaN(Number(s.valor))) {
-    return Number(s.valor);
+    if (Number(s.valor) > 0) {
+      return Number(s.valor);
+    }
   }
-  return isInstalacao(s) ? 100 : 0;
+  return (isInstalacao(s) || isMudancaEndereco(s)) ? 100 : 0;
 };
+
+/**
+ * Calcula a quantidade de metros utilizada do rolo de cabo drop
+ * com base na diferença entre a metragem final e inicial.
+ */
+export const calcularMetragemUtilizada = (
+  dadosVisita?: {
+    metragemInicial?: number | string;
+    metragemFinal?: number | string;
+    metragemRolo?: number | string;
+  } | null
+): number | null => {
+  if (!dadosVisita) return null;
+  const { metragemInicial, metragemFinal } = dadosVisita;
+
+  const temInicial =
+    metragemInicial !== '' &&
+    metragemInicial !== null &&
+    metragemInicial !== undefined &&
+    !isNaN(Number(metragemInicial));
+
+  const temFinal =
+    metragemFinal !== '' &&
+    metragemFinal !== null &&
+    metragemFinal !== undefined &&
+    !isNaN(Number(metragemFinal));
+
+  if (temInicial && temFinal) {
+    return Math.abs(Number(metragemFinal) - Number(metragemInicial));
+  }
+
+  return null;
+};
+
+/**
+ * Converte qualquer formato de data (DD/MM/YYYY, YYYY-MM-DD, timestamp, etc.)
+ * para o padrão ISO YYYY-MM-DD
+ */
+export const formatarDataParaIso = (dataStr?: string | null): string => {
+  if (!dataStr) return '';
+  const limpo = dataStr.trim();
+  
+  // Se já estiver no formato YYYY-MM-DD
+  const matchIso = limpo.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (matchIso) {
+    return `${matchIso[1]}-${matchIso[2]}-${matchIso[3]}`;
+  }
+
+  // Se estiver no formato DD/MM/YYYY
+  const matchBr = limpo.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (matchBr) {
+    const dia = matchBr[1].padStart(2, '0');
+    const mes = matchBr[2].padStart(2, '0');
+    const ano = matchBr[3];
+    return `${ano}-${mes}-${dia}`;
+  }
+
+  // Tenta parser padrão de Date
+  try {
+    const d = new Date(limpo);
+    if (!isNaN(d.getTime())) {
+      const ano = d.getFullYear();
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const dia = String(d.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    }
+  } catch (e) {}
+
+  return limpo.slice(0, 10);
+};
+
+/**
+ * Formata uma data para exibição no padrão brasileiro DD/MM/YYYY
+ */
+export const formatarDataExibicao = (dataStr?: string | null): string => {
+  if (!dataStr) return '-';
+  const iso = formatarDataParaIso(dataStr);
+  if (!iso || !iso.includes('-')) return dataStr;
+  const [ano, mes, dia] = iso.split('-');
+  return `${dia}/${mes}/${ano}`;
+};
+
